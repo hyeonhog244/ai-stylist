@@ -7,7 +7,7 @@ import mediapipe as mp
 # ----------------------------------------------------------
 # 👇 여기에 아까 복사한 API 키를 붙여넣으세요!
 # 예시: GOOGLE_API_KEY = "AIzaSyD..."
-GOOGLE_API_KEY = "AIzaSyDDIVKPwLheVt2dey9choqZldlfSG47uQY"
+GOOGLE_API_KEY = "AIzaSyDxJg31f3qB2xBovoNy14qXNIAzYIzO76M"
 # ----------------------------------------------------------
 
 # API 설정
@@ -145,6 +145,7 @@ with tab2:
                     st.link_button("🛍️ 추천 코디 쇼핑하기", f"https://search.shopping.naver.com/search/all?query={body_type} 코디")
                 else:
                     st.error("전신 사진을 다시 확인해 주세요.")
+
 
 
 
