@@ -1,151 +1,147 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
-import cv2
+import google.generativeai as genai
 import mediapipe as mp
 
-# 페이지 설정
-st.set_page_config(page_title="AI 스타일리스트", page_icon="👗")
+# ----------------------------------------------------------
+# 👇 여기에 아까 복사한 API 키를 붙여넣으세요!
+# 예시: GOOGLE_API_KEY = "AIzaSyD..."
+GOOGLE_API_KEY = "AIzaSyClWbHbZNlzsjSCrrez2DfJMHIIzzqZXcE"
+# ----------------------------------------------------------
 
-# --- 💡 로직 (원래 main.py에 있던 두뇌) ---
+# API 설정
+genai.configure(api_key=GOOGLE_API_KEY)
+
+# 페이지 설정
+st.set_page_config(page_title="Personal AI Stylist Pro", page_icon="✨", layout="centered")
+
+# 스타일 숨기기
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+# --- AI 도우미 함수 (Gemini에게 말 걸기) ---
+def ask_gemini(prompt):
+    model = genai.GenerativeModel('gemini-pro')
+    response = model.generate_content(prompt)
+    return response.text
+
+# --- 기존 분석 로직 (눈) ---
 mp_face_mesh = mp.solutions.face_mesh
 mp_pose = mp.solutions.pose
 
 def analyze_personal_color(image):
     with mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True) as face_mesh:
-        # Streamlit은 이미지를 RGB로 읽으므로 바로 사용
         results = face_mesh.process(np.array(image))
-        
         if not results.multi_face_landmarks:
-            return None, "얼굴을 찾을 수 없습니다."
-
+            return None, "얼굴을 인식하지 못했습니다."
+            
         landmarks = results.multi_face_landmarks[0].landmark
         img_np = np.array(image)
         h, w, _ = img_np.shape
         
-        # 볼 중앙 좌표 (116번)
         cx, cy = int(landmarks[116].x * w), int(landmarks[116].y * h)
+        if cx >= w or cy >= h: return None, "얼굴이 화면 밖입니다."
         
-        # 좌표가 이미지 밖으로 나가는지 확인
-        if cx >= w or cy >= h:
-            return None, "얼굴이 너무 가장자리에 있습니다."
-
         pixel = img_np[cy, cx]
-        red, green, blue = int(pixel[0]), int(pixel[1]), int(pixel[2])
-        
-        # 웜/쿨 판단
-        tone = "Warm Tone (웜톤)" if red > blue else "Cool Tone (쿨톤)"
-        
-        # 추천 로직
-        if tone == "Warm Tone (웜톤)":
-            recommendation = {
-                "jewelry": "골드 (Gold)",
-                "makeup": {"lip": "코랄, 오렌지 레드, 브릭", "blusher": "피치, 살구색"},
-                "avoid": "차가운 핑크, 실버, 푸른끼 회색"
-            }
-        else:
-            recommendation = {
-                "jewelry": "실버 (Silver)",
-                "makeup": {"lip": "베이비 핑크, 플럼, 쿨레드", "blusher": "딸기우유 핑크, 라벤더"},
-                "avoid": "카키, 오렌지, 짙은 브라운"
-            }
-            
-        return tone, recommendation
+        tone = "웜톤 (Warm Tone)" if pixel[0] > pixel[2] else "쿨톤 (Cool Tone)"
+        return tone, None
 
 def analyze_body_shape(image):
     with mp_pose.Pose(static_image_mode=True) as pose:
         results = pose.process(np.array(image))
+        if not results.pose_landmarks: return None, None
         
-        if not results.pose_landmarks:
-            return None, None
-
         lm = results.pose_landmarks.landmark
-        
-        # 어깨/골반 너비 (비율 계산)
         shoulder = abs(lm[11].x - lm[12].x)
         hip = abs(lm[23].x - lm[24].x)
-        ratio = shoulder / hip if hip > 0 else 1.0
+        if hip == 0: hip = 0.1
+        ratio = shoulder / hip
         
-        # 체형 추천 로직
-        if ratio > 1.05:
-            advice = {
-                "type": "역삼각형 (어깨 발달형)",
-                "desc": "시크하고 멋진 체형! 하체 볼륨을 살려보세요.",
-                "styling": {"top": "브이넥, 어두운 컬러", "bottom": "와이드 팬츠, 밝은 컬러", "accessary": "긴 목걸이"}
-            }
-        elif ratio < 0.95:
-            advice = {
-                "type": "삼각형 (하체 발달형)",
-                "desc": "우아한 라인입니다! 상의에 포인트를 주세요.",
-                "styling": {"top": "퍼프 소매, 화려한 패턴", "bottom": "스트레이트 핏, 어두운 컬러", "accessary": "화려한 귀걸이"}
-            }
-        else:
-            advice = {
-                "type": "모래시계/직사각형 (균형형)",
-                "desc": "비율이 좋습니다! 허리를 강조해보세요.",
-                "styling": {"top": "크롭티, 허리 벨트 자켓", "bottom": "하이웨스트, 부츠컷", "accessary": "허리 벨트"}
-            }
-            
-        return ratio, advice
+        if ratio > 1.05: type_ = "역삼각형 (어깨 발달형)"
+        elif ratio < 0.95: type_ = "삼각형 (골반 발달형)"
+        else: type_ = "모래시계형 (균형 잡힌 체형)"
+        
+        return ratio, type_
 
-# --- 🖥️ 화면 구성 (Streamlit) ---
-st.title("👗 나만의 AI 스타일리스트")
-st.write("당신의 사진을 업로드하면 **퍼스널 컬러**와 **체형**을 분석해 드려요!")
+# --- 메인 화면 ---
+st.title("✨ AI Stylist : 제니")
+st.write("단순한 분석이 아닙니다. 생성형 AI가 당신만을 위한 스타일링 조언을 해드립니다.")
 
-tab1, tab2 = st.tabs(["🎨 퍼스널 컬러 진단", "my 체형 분석 & 코디"])
+tab1, tab2 = st.tabs(["🎨 퍼스널 컬러", "👗 체형 코디"])
 
-# 탭 1: 퍼스널 컬러
+# 탭 1: 퍼스널 컬러 + AI 조언
 with tab1:
-    st.header("나의 퍼스널 컬러는?")
-    uploaded_file_face = st.file_uploader("얼굴 사진 업로드", type=["jpg", "png", "jpeg"], key="face")
-
-    if uploaded_file_face is not None:
-        image = Image.open(uploaded_file_face)
-        st.image(image, caption='업로드한 사진', width=300)
+    img_file = st.file_uploader("얼굴 사진 업로드", type=["jpg", "png"], key="face")
+    if img_file:
+        image = Image.open(img_file)
+        st.image(image, width=200)
         
-        if st.button("분석 시작", key="btn_face"):
-            with st.spinner('분석 중...'):
-                tone, info = analyze_personal_color(image)
-                
+        if st.button("AI 스타일링 받기", key="btn_face"):
+            with st.spinner('AI가 얼굴을 분석하고 편지를 쓰는 중입니다...✍️'):
+                tone, err = analyze_personal_color(image)
                 if tone:
-                    st.success(f"당신의 톤은 **{tone}** 입니다! 🎉")
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.info(f"✨ **추천 주얼리**: {info['jewelry']}")
-                        st.write(f"💄 **립스틱**: {info['makeup']['lip']}")
-                    with col2:
-                        st.write(f"😊 **블러셔**: {info['makeup']['blusher']}")
-                        st.warning(f"🚫 **피하면 좋은 색**: {info['avoid']}")
+                    st.success(f"당신의 톤: **{tone}**")
+                    
+                    # 💡 여기가 핵심! AI에게 프롬프트 보내기
+                    prompt = f"""
+                    사용자는 퍼스널 컬러 진단 결과 '{tone}'이 나왔어.
+                    너는 친절하고 센스 있는 10년 차 패션 스타일리스트 '제니'야.
+                    사용자에게 이 톤에 어울리는:
+                    1. 메이크업 팁 (립, 블러셔 컬러 구체적으로)
+                    2. 어울리는 옷 색깔
+                    3. 피해야 할 색깔
+                    4. 따뜻한 격려의 한마디
+                    
+                    이 내용을 이모지를 섞어서 보기 편하게, 친근한 말투로 작성해 줘.
+                    """
+                    
+                    # Gemini가 쓴 글 받아오기
+                    ai_advice = ask_gemini(prompt)
+                    st.markdown(ai_advice) # 화면에 출력
                     
                     st.markdown("---")
-                    st.link_button(f"💄 {tone} 추천 립스틱 쇼핑하기", f"https://search.shopping.naver.com/search/all?query={tone} 립스틱")
+                    keyword = "웜톤 립스틱" if "웜톤" in tone else "쿨톤 립스틱"
+                    st.link_button("🛍️ 추천 아이템 보러가기", f"https://search.shopping.naver.com/search/all?query={keyword}")
                 else:
-                    st.error(info)
+                    st.error(err)
 
-# 탭 2: 체형 분석
+# 탭 2: 체형 분석 + AI 조언
 with tab2:
-    st.header("나의 체형 비율과 추천 코디")
-    uploaded_file_body = st.file_uploader("전신 사진 업로드", type=["jpg", "png", "jpeg"], key="body")
-
-    if uploaded_file_body is not None:
-        image = Image.open(uploaded_file_body)
-        st.image(image, caption='업로드한 사진', width=300)
+    img_file = st.file_uploader("전신 사진 업로드", type=["jpg", "png"], key="body")
+    if img_file:
+        image = Image.open(img_file)
+        st.image(image, width=200)
         
-        if st.button("체형 분석 시작", key="btn_body"):
-            with st.spinner('측정 중...'):
-                ratio, advice = analyze_body_shape(image)
-                
+        if st.button("AI 코디 추천 받기", key="btn_body"):
+            with st.spinner('체형 분석 후 코디를 구상 중입니다...👗'):
+                ratio, body_type = analyze_body_shape(image)
                 if ratio:
-                    st.success(f"결과: **{advice['type']}**")
-                    st.metric("어깨:골반 비율", round(ratio, 2))
-                    st.write(f"💡 {advice['desc']}")
+                    st.success(f"체형 타입: **{body_type}**")
                     
-                    st.subheader("추천 코디")
-                    st.write(f"- 👚 **상의**: {advice['styling']['top']}")
-                    st.write(f"- 👖 **하의**: {advice['styling']['bottom']}")
+                    # 💡 AI에게 프롬프트 보내기
+                    prompt = f"""
+                    사용자의 체형은 '{body_type}'이야. (어깨와 골반 비율: {ratio:.2f})
+                    너는 프로 패션 컨설턴트야.
+                    이 체형의 장점을 살리고 단점을 보완할 수 있는:
+                    1. 상의 스타일 추천 (구체적인 넥라인, 핏)
+                    2. 하의 스타일 추천
+                    3. 전체적인 스타일링 팁 (액세서리 등)
+                    
+                    자신감을 심어주는 말투로 예쁘게 작성해 줘.
+                    """
+                    
+                    ai_advice = ask_gemini(prompt)
+                    st.markdown(ai_advice)
                     
                     st.markdown("---")
-                    keyword = advice['styling']['bottom'].split(',')[0]
-                    st.link_button(f"🛍️ {keyword} 쇼핑하러 가기", f"https://search.shopping.naver.com/search/all?query={keyword}")
+                    keyword = "와이드 팬츠" # 간단히 예시
+                    st.link_button("🛍️ 추천 코디 쇼핑하기", f"https://search.shopping.naver.com/search/all?query={body_type} 코디")
                 else:
-                    st.error("전신이 잘 나온 사진을 써주세요!")
+                    st.error("전신 사진을 다시 확인해 주세요.")
