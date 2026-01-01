@@ -28,7 +28,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # --- AI 도우미 함수 (Gemini에게 말 걸기) ---
 def ask_gemini(prompt):
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content(prompt)
     return response.text
 
@@ -145,5 +145,6 @@ with tab2:
                     st.link_button("🛍️ 추천 코디 쇼핑하기", f"https://search.shopping.naver.com/search/all?query={body_type} 코디")
                 else:
                     st.error("전신 사진을 다시 확인해 주세요.")
+
 
 
