@@ -5,3 +5,4 @@ numpy
 opencv-python-headless
 pillow
 google-generativeai>=0.7.0
+
