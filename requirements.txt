@@ -1,9 +1,6 @@
 streamlit
-fastapi
-uvicorn
-mediapipe
+mediapipe==0.10.9
+protobuf==3.20.3
 numpy
 opencv-python-headless
-requests
-python-multipart
 pillow
