@@ -4,3 +4,4 @@ protobuf==3.20.3
 numpy
 opencv-python-headless
 pillow
+google-generativeai
