@@ -154,7 +154,6 @@ with tab1:
                     result = ask_gemini(f"사용자는 '{tone}'이야. 어울리는 립/블러셔 추천해줘.")
                     st.markdown(result)
                     
-                    # [올리브영] 톤 이름으로 검색
                     keyword = urllib.parse.quote(f"{tone}")
                     link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
                     st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
@@ -175,8 +174,8 @@ with tab2:
                     result = ask_gemini(f"체형 '{body_type}'에 어울리는 요즘 유행 코디 추천해줘.")
                     st.markdown(result)
                     
-                    # [무신사] 랭킹 페이지로 바로 이동 (검색 X)
-                    link = "https://www.musinsa.com/ranking/best"
+                    # 🔥 [수정] 무신사 최신 랭킹 주소 적용
+                    link = "https://www.musinsa.com/main/musinsa/ranking"
                     st.link_button(f"🔥 무신사 랭킹 보고 옷 고르기", link)
                 else:
                     st.error("전신 사진 필요")
@@ -200,7 +199,6 @@ with tab3:
                     st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
                 else:
                     st.error(err)
-
 
 
 
