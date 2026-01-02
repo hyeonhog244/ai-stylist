@@ -6,51 +6,48 @@ import mediapipe as mp
 
 # 페이지 설정
 st.set_page_config(page_title="Personal AI Stylist Pro", page_icon="✨", layout="centered")
-
-# 스타일 숨기기
 st.markdown("""<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
 # ----------------------------------------------------------
-# 🔥 [핵심] 이제 코드가 아니라 '화면'에서 키를 받습니다!
+# 🔑 사이드바: 키 입력 (공백 자동 제거 기능 추가!)
 # ----------------------------------------------------------
 with st.sidebar:
     st.header("🔑 API 키 설정")
-    st.info("아까 진단기에서 성공했던 그 키를 아래에 붙여넣으세요.")
-    api_key_input = st.text_input("Google AI Key 입력", type="password", placeholder="AIzaSy...로 시작하는 키")
+    st.info("아까 진단기에서 성공했던 그 키를 넣어주세요.")
     
-    if not api_key_input:
-        st.warning("👈 왼쪽에 API 키를 넣어야 작동합니다!")
-        st.stop() # 키가 없으면 여기서 멈춤
+    # 1. 입력받기
+    raw_api_key = st.text_input("Google AI Key 입력", type="password", placeholder="AIza... 키 붙여넣기")
+    
+    # 2. 🔥 [핵심] 앞뒤 공백 자동 제거 (실수 방지!)
+    api_key = raw_api_key.strip()
 
-# 입력받은 키로 설정 (이제 실수할 일이 없습니다!)
-try:
-    genai.configure(api_key=api_key_input)
-except Exception as e:
-    st.error(f"키 설정 중 오류가 발생했습니다: {e}")
+    if not api_key:
+        st.warning("👈 왼쪽 빈칸에 API 키를 넣어주세요!")
+        st.stop()
 
-# --- AI 도우미 함수 (자동으로 되는 모델 찾기) ---
+    # 3. 설정 적용
+    try:
+        genai.configure(api_key=api_key)
+    except Exception as e:
+        st.error(f"키 설정 오류: {e}")
+
+# --- AI 도우미 함수 ---
 def ask_gemini(prompt):
-    # 진단기에서 확인된 '되는 이름'들 총출동
-    candidates = [
-        "models/gemini-1.5-flash",   # 1순위 (진단기 성공 이름)
-        "gemini-1.5-flash",          # 2순위
-        "models/gemini-pro",         # 3순위
-        "gemini-pro"                 # 4순위
-    ]
-    
-    last_error = None
-    for model_name in candidates:
+    # 가장 확실한 모델 이름 사용
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        # 혹시 Flash가 안 되면 Pro로 재시도
         try:
-            model = genai.GenerativeModel(model_name)
+            model = genai.GenerativeModel('gemini-pro')
             response = model.generate_content(prompt)
-            return response.text # 성공하면 바로 리턴
-        except Exception as e:
-            last_error = e
-            continue # 실패하면 다음 후보로
-            
-    return f"AI 연결 실패: {last_error}"
+            return response.text
+        except:
+            return f"죄송합니다. 오류가 발생했습니다. (에러 내용: {e})\n\n💡 팁: 키가 정확한지, 프로젝트에 권한이 있는지 확인해주세요."
 
-# --- 분석 로직 ---
+# --- 분석 로직 (MediaPipe) ---
 mp_face_mesh = mp.solutions.face_mesh
 mp_pose = mp.solutions.pose
 
@@ -83,7 +80,7 @@ def analyze_body_shape(image):
 
 # --- 메인 화면 ---
 st.title("✨ AI Stylist : 제니")
-st.write("당신의 퍼스널 컬러와 체형을 분석하고 조언해드립니다.")
+st.write("AI가 당신을 분석하고 맞춤형 스타일링을 제안합니다.")
 
 tab1, tab2 = st.tabs(["🎨 퍼스널 컬러", "👗 체형 코디"])
 
@@ -93,11 +90,11 @@ with tab1:
         image = Image.open(img_file)
         st.image(image, width=200)
         if st.button("AI 스타일링 받기", key="btn_face"):
-            with st.spinner('분석 중...'):
+            with st.spinner('AI 제니가 분석 중입니다...'):
                 tone, err = analyze_personal_color(image)
                 if tone:
                     st.success(f"당신의 톤: **{tone}**")
-                    prompt = f"사용자는 '{tone}'이야. 10년차 스타일리스트로서 립/블러셔/옷 컬러 추천과 격려를 이모지 섞어서 해줘."
+                    prompt = f"사용자는 '{tone}'이야. 10년차 스타일리스트로서 립/블러셔/옷 컬러 추천과 격려를 이모지 섞어서 다정하게 해줘."
                     result = ask_gemini(prompt)
                     st.markdown(result)
                 else:
@@ -109,7 +106,7 @@ with tab2:
         image = Image.open(img_file)
         st.image(image, width=200)
         if st.button("AI 코디 추천 받기", key="btn_body"):
-            with st.spinner('분석 중...'):
+            with st.spinner('AI 제니가 코디를 찾는 중입니다...'):
                 ratio, body_type = analyze_body_shape(image)
                 if ratio:
                     st.success(f"체형 타입: **{body_type}**")
