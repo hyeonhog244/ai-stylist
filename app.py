@@ -10,7 +10,7 @@ import urllib.parse
 GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
 # ----------------------------------------------------------
 
-# 페이지 설정 (initial_sidebar_state="expanded" -> 무조건 열린 채로 시작!)
+# 페이지 설정 (사이드바 열림 고정)
 st.set_page_config(
     page_title="AI 스타일리스트 제니", 
     page_icon="✨", 
@@ -38,10 +38,8 @@ st.markdown("""
         a[href*="oliveyoung"] { color: #86C041 !important; font-weight: bold; }
         a[href*="musinsa"] { color: #000000 !important; font-weight: bold; }
         
-        /* 🚨 수정된 부분: 헤더(상단바)를 완전히 숨기지 않고, 메뉴 버튼만 살림 */
         #MainMenu {visibility: hidden;} 
         footer {visibility: hidden;}
-        /* header {visibility: hidden;}  <-- 이 줄을 지워서 화살표가 보이게 했습니다! */
     </style>
 """, unsafe_allow_html=True)
 
@@ -162,7 +160,53 @@ with tab1:
                     st.markdown(result)
                     
                     keyword = urllib.parse.quote(f"{tone} 틴트 블러셔")
-                    link = f"
+                    # 👇 여기가 끊기지 않게 주의하세요!
+                    link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
+                    st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
+                else:
+                    st.error(err)
+
+with tab2:
+    st.header("👗 체형 분석 & 코디 추천")
+    img_file = st.file_uploader("전신 사진", type=["jpg", "png"], key="body")
+    if img_file:
+        image = Image.open(img_file)
+        st.image(image, width=200)
+        if st.button("코디 추천받기", key="btn_body"):
+            with st.spinner('분석 중...'):
+                ratio, body_type = analyze_body_shape(image)
+                if ratio:
+                    st.success(f"체형 타입: **{body_type}**")
+                    result = ask_gemini(f"체형 '{body_type}'에 어울리는 요즘 유행 코디 추천해줘.")
+                    st.markdown(result)
+                    
+                    keyword = urllib.parse.quote(f"{body_type} 코디")
+                    # 👇 여기도 끊기지 않게 주의!
+                    link = f"https://www.musinsa.com/search/musinsa/integration?type=&q={keyword}"
+                    st.link_button(f"🖤 무신사에서 '{body_type}' 옷 구경하기", link)
+                else:
+                    st.error("전신 사진 필요")
+
+with tab3:
+    st.header("💇‍♀️ 얼굴형 맞춤 헤어")
+    img_file = st.file_uploader("정면 얼굴", type=["jpg", "png"], key="hair")
+    if img_file:
+        image = Image.open(img_file)
+        st.image(image, width=200)
+        if st.button("헤어 추천받기", key="btn_hair"):
+            with st.spinner('분석 중...'):
+                shape, err = analyze_face_shape(image)
+                if shape:
+                    st.success(f"얼굴형: **{shape}**")
+                    result = ask_gemini(f"얼굴형 '{shape}'에 어울리는 헤어스타일 추천해줘.")
+                    st.markdown(result)
+                    
+                    keyword = urllib.parse.quote(f"{shape} 헤어스타일 추천")
+                    # 👇 여기도 확인!
+                    link = f"https://www.youtube.com/results?search_query={keyword}"
+                    st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
+                else:
+                    st.error(err)
 
 
 
