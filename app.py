@@ -7,7 +7,7 @@ import urllib.parse
 
 # ----------------------------------------------------------
 # 👇 '진짜 API 키'를 넣어주세요 (따옴표 필수!)
-GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
+GOOGLE_API_KEY = "AIzaSy...여기에_진짜_키를_넣으세요..."
 # ----------------------------------------------------------
 
 # 페이지 설정 (사이드바 열림 고정)
@@ -159,8 +159,10 @@ with tab1:
                     result = ask_gemini(f"사용자는 '{tone}'이야. 어울리는 립/블러셔 추천해줘.")
                     st.markdown(result)
                     
-                    keyword = urllib.parse.quote(f"{tone} 틴트 블러셔")
-                    # 👇 여기가 끊기지 않게 주의하세요!
+                    # 🔥 [수정됨] 검색어를 심플하게 변경!
+                    # 기존: f"{tone} 틴트 블러셔" -> 변경: f"{tone}"
+                    keyword = urllib.parse.quote(f"{tone}")
+                    
                     link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
                     st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
                 else:
@@ -181,7 +183,6 @@ with tab2:
                     st.markdown(result)
                     
                     keyword = urllib.parse.quote(f"{body_type} 코디")
-                    # 👇 여기도 끊기지 않게 주의!
                     link = f"https://www.musinsa.com/search/musinsa/integration?type=&q={keyword}"
                     st.link_button(f"🖤 무신사에서 '{body_type}' 옷 구경하기", link)
                 else:
@@ -202,7 +203,6 @@ with tab3:
                     st.markdown(result)
                     
                     keyword = urllib.parse.quote(f"{shape} 헤어스타일 추천")
-                    # 👇 여기도 확인!
                     link = f"https://www.youtube.com/results?search_query={keyword}"
                     st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
                 else:
