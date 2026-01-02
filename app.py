@@ -7,7 +7,7 @@ import urllib.parse
 
 # ----------------------------------------------------------
 # 👇 '진짜 API 키'를 넣어주세요 (따옴표 필수!)
-GOOGLE_API_KEY = "AIzaSy...여기에_진짜_키를_넣으세요..."
+GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
 # ----------------------------------------------------------
 
 # 페이지 설정 (사이드바 열림 고정)
@@ -207,6 +207,7 @@ with tab3:
                     st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
                 else:
                     st.error(err)
+
 
 
 
