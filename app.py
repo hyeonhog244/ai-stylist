@@ -9,43 +9,38 @@ st.set_page_config(page_title="Personal AI Stylist Pro", page_icon="✨", layout
 st.markdown("""<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
 # ----------------------------------------------------------
-# 🔑 사이드바: 키 입력 (공백 자동 제거 기능 추가!)
+# 🔑 사이드바: 키 입력 + 통신 설정 (핵심!)
 # ----------------------------------------------------------
 with st.sidebar:
     st.header("🔑 API 키 설정")
-    st.info("아까 진단기에서 성공했던 그 키를 넣어주세요.")
+    st.info("AIzaSyAOyVgnmN-3qnGt53ftiS8NmCfkfKvx7LI")
     
-    # 1. 입력받기
+    # 1. 입력받기 (따옴표나 공백이 있어도 알아서 처리함)
     raw_api_key = st.text_input("Google AI Key 입력", type="password", placeholder="AIza... 키 붙여넣기")
     
-    # 2. 🔥 [핵심] 앞뒤 공백 자동 제거 (실수 방지!)
-    api_key = raw_api_key.strip()
+    # 2. 전처리: 공백 및 따옴표 제거 (실수 방지)
+    api_key = raw_api_key.strip().replace('"', '').replace("'", "")
 
     if not api_key:
         st.warning("👈 왼쪽 빈칸에 API 키를 넣어주세요!")
         st.stop()
 
-    # 3. 설정 적용
+    # 3. 🔥 [핵심 해결책] 'transport="rest"' 추가!
+    # (서버 막힘 없이 일반 인터넷망으로 우회해서 연결하는 설정)
     try:
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=api_key, transport='rest')
     except Exception as e:
-        st.error(f"키 설정 오류: {e}")
+        st.error(f"설정 오류: {e}")
 
 # --- AI 도우미 함수 ---
 def ask_gemini(prompt):
-    # 가장 확실한 모델 이름 사용
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # 진단기에서 성공했던 그 이름 그대로 사용
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
     try:
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        # 혹시 Flash가 안 되면 Pro로 재시도
-        try:
-            model = genai.GenerativeModel('gemini-pro')
-            response = model.generate_content(prompt)
-            return response.text
-        except:
-            return f"죄송합니다. 오류가 발생했습니다. (에러 내용: {e})\n\n💡 팁: 키가 정확한지, 프로젝트에 권한이 있는지 확인해주세요."
+        return f"죄송합니다. 오류가 발생했습니다.\n(에러 내용: {e})\n\n💡 팁: 키가 정확한지 확인해주세요."
 
 # --- 분석 로직 (MediaPipe) ---
 mp_face_mesh = mp.solutions.face_mesh
