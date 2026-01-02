@@ -5,7 +5,7 @@ import google.generativeai as genai
 import mediapipe as mp
 import urllib.parse
 
-# 페이지 설정 (사이드바 열림 고정)
+# 페이지 설정
 st.set_page_config(
     page_title="AI 스타일리스트 제니", 
     page_icon="✨", 
@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS 스타일 (디자인)
+# CSS 스타일
 st.markdown("""
     <style>
         @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css");
@@ -32,20 +32,17 @@ st.markdown("""
         .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
         a[href*="oliveyoung"] { color: #86C041 !important; font-weight: bold; }
         a[href*="musinsa"] { color: #000000 !important; font-weight: bold; }
-        
         #MainMenu {visibility: hidden;} 
         footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------------------------------------
-# 🔒 비밀 금고(Secrets)에서 키 가져오기 (보안 유지)
-# ----------------------------------------------------------
+# 🔒 비밀 금고에서 API 키 가져오기
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key, transport='rest')
 except Exception as e:
-    st.error("🚨 API 키를 찾을 수 없습니다. Streamlit Settings > Secrets 설정을 확인해주세요!")
+    st.error("🚨 API 키 오류: Streamlit Settings > Secrets에 키가 저장되어 있는지 확인해주세요.")
     st.stop()
 
 # --- 📊 사이드바 ---
@@ -57,7 +54,6 @@ with st.sidebar:
     badge_url = f"https://hits.seeyoufarm.com/api/count/incr/badge.svg?url={my_app_url}&count_bg=%23FF6B6B&title_bg=%23555555&icon=streamlit.svg&icon_color=%23E7E7E7&title=VISITORS&edge_flat=false"
     st.markdown(f'<img src="{badge_url}" style="display:none">', unsafe_allow_html=True)
 
-    # 주인장 확인용 (?view=master)
     if "view" in st.query_params and st.query_params["view"] == "master":
         st.markdown("### 👁️ (관리자용) 방문자 수")
         st.image(badge_url)
@@ -158,11 +154,52 @@ with tab1:
                     result = ask_gemini(f"사용자는 '{tone}'이야. 어울리는 립/블러셔 추천해줘.")
                     st.markdown(result)
                     
-                    # 올리브영 검색: '웜톤', '쿨톤' 키워드만 사용
+                    # [올리브영] 톤 이름으로 검색
                     keyword = urllib.parse.quote(f"{tone}")
-                    link = f
+                    link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
+                    st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
+                else:
+                    st.error(err)
 
+with tab2:
+    st.header("👗 체형 분석 & 코디 추천")
+    img_file = st.file_uploader("전신 사진", type=["jpg", "png"], key="body")
+    if img_file:
+        image = Image.open(img_file)
+        st.image(image, width=200)
+        if st.button("코디 추천받기", key="btn_body"):
+            with st.spinner('분석 중...'):
+                ratio, body_type = analyze_body_shape(image)
+                if ratio:
+                    st.success(f"체형 타입: **{body_type}**")
+                    result = ask_gemini(f"체형 '{body_type}'에 어울리는 요즘 유행 코디 추천해줘.")
+                    st.markdown(result)
+                    
+                    # [무신사] 랭킹 페이지로 바로 이동 (검색 X)
+                    link = "https://www.musinsa.com/ranking/best"
+                    st.link_button(f"🔥 무신사 랭킹 보고 옷 고르기", link)
+                else:
+                    st.error("전신 사진 필요")
 
+with tab3:
+    st.header("💇‍♀️ 얼굴형 맞춤 헤어")
+    img_file = st.file_uploader("정면 얼굴", type=["jpg", "png"], key="hair")
+    if img_file:
+        image = Image.open(img_file)
+        st.image(image, width=200)
+        if st.button("헤어 추천받기", key="btn_hair"):
+            with st.spinner('분석 중...'):
+                shape, err = analyze_face_shape(image)
+                if shape:
+                    st.success(f"얼굴형: **{shape}**")
+                    result = ask_gemini(f"얼굴형 '{shape}'에 어울리는 헤어스타일 추천해줘.")
+                    st.markdown(result)
+                    
+                    keyword = urllib.parse.quote(f"{shape} 헤어스타일 추천")
+                    link = f"https://www.youtube.com/results?search_query={keyword}"
+                    st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
+                else:
+                    st.error(err)
 
 
 
