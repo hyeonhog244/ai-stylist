@@ -5,7 +5,10 @@ import google.generativeai as genai
 import mediapipe as mp
 
 # ----------------------------------------------------------
-GOOGLE_API_KEY = "AIzaSyAOyVgnmN-3qnGt53ftiS8NmCfkfKvx7LI"
+# 👇 여기에 아까 성공했던 '진짜 API 키'를 붙여넣으세요!
+# 예: GOOGLE_API_KEY = "AIzaSyD..."
+GOOGLE_API_KEY = "AIzaSyAOyVgnmN-3qnGt53ftiS8NmCfkfKvx7LI" 
+# ----------------------------------------------------------
 
 # API 설정
 try:
@@ -16,7 +19,7 @@ except Exception as e:
 # 페이지 설정
 st.set_page_config(page_title="Personal AI Stylist Pro", page_icon="✨", layout="centered")
 
-# 스타일 숨기기 (깔끔하게)
+# 스타일 숨기기
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
@@ -28,12 +31,12 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # --- AI 도우미 함수 ---
 def ask_gemini(prompt):
-    # 💡 방금 성공한 모델 이름 'gemini-1.5-flash' 사용!
+    # 💡 [핵심 수정] 진단기에서 알려준 '풀네임' 사용!
     model = genai.GenerativeModel('models/gemini-1.5-flash')
     response = model.generate_content(prompt)
     return response.text
 
-# --- 분석 로직 (MediaPipe) ---
+# --- 분석 로직 ---
 mp_face_mesh = mp.solutions.face_mesh
 mp_pose = mp.solutions.pose
 
@@ -77,7 +80,6 @@ st.write("당신의 퍼스널 컬러와 체형을 분석하고, 맞춤형 스타
 
 tab1, tab2 = st.tabs(["🎨 퍼스널 컬러", "👗 체형 코디"])
 
-# 탭 1: 퍼스널 컬러
 with tab1:
     img_file = st.file_uploader("얼굴 사진 업로드", type=["jpg", "png"], key="face")
     if img_file:
@@ -89,7 +91,6 @@ with tab1:
                 tone, err = analyze_personal_color(image)
                 if tone:
                     st.success(f"당신의 톤: **{tone}**")
-                    
                     prompt = f"""
                     사용자는 퍼스널 컬러 진단 결과 '{tone}'이 나왔어.
                     너는 10년 차 패션 스타일리스트 '제니'야.
@@ -104,15 +105,11 @@ with tab1:
                     try:
                         ai_advice = ask_gemini(prompt)
                         st.markdown(ai_advice)
-                        st.markdown("---")
-                        keyword = "웜톤 립스틱" if "웜톤" in tone else "쿨톤 립스틱"
-                        st.link_button("🛍️ 추천 아이템 보러가기", f"https://search.shopping.naver.com/search/all?query={keyword}")
                     except Exception as e:
                         st.error(f"AI 연결 오류: {e}")
                 else:
                     st.error(err)
 
-# 탭 2: 체형 분석
 with tab2:
     img_file = st.file_uploader("전신 사진 업로드", type=["jpg", "png"], key="body")
     if img_file:
@@ -124,21 +121,17 @@ with tab2:
                 ratio, body_type = analyze_body_shape(image)
                 if ratio:
                     st.success(f"체형 타입: **{body_type}**")
-                    
                     prompt = f"""
                     사용자의 체형은 '{body_type}'이야.
                     프로 스타일리스트로서:
                     1. 체형을 보완하는 상의 스타일 (넥라인, 핏)
                     2. 다리가 길어 보이는 하의 추천
                     3. 전체적인 밸런스를 위한 팁
-                    
                     자신감을 주는 말투로 작성해 줘.
                     """
                     try:
                         ai_advice = ask_gemini(prompt)
                         st.markdown(ai_advice)
-                        st.markdown("---")
-                        st.link_button("🛍️ 추천 코디 쇼핑하기", f"https://search.shopping.naver.com/search/all?query={body_type} 코디")
                     except Exception as e:
                         st.error(f"AI 연결 오류: {e}")
                 else:
