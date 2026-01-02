@@ -29,7 +29,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 # --- AI 도우미 함수 ---
 def ask_gemini(prompt):
     # 💡 방금 성공한 모델 이름 'gemini-1.5-flash' 사용!
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-pro')
     response = model.generate_content(prompt)
     return response.text
 
@@ -143,6 +143,7 @@ with tab2:
                         st.error(f"AI 연결 오류: {e}")
                 else:
                     st.error("전신이 잘 나온 사진을 올려주세요.")
+
 
 
 
