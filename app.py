@@ -5,11 +5,6 @@ import google.generativeai as genai
 import mediapipe as mp
 import urllib.parse
 
-# ----------------------------------------------------------
-# 👇 '진짜 API 키'를 넣어주세요 (따옴표 필수!)
-GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
-# ----------------------------------------------------------
-
 # 페이지 설정 (사이드바 열림 고정)
 st.set_page_config(
     page_title="AI 스타일리스트 제니", 
@@ -43,11 +38,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# API 설정
+# ----------------------------------------------------------
+# 🔥 [핵심 수정] 이제 코드가 아니라 '비밀 금고(Secrets)'에서 키를 가져옵니다!
+# ----------------------------------------------------------
 try:
-    genai.configure(api_key=GOOGLE_API_KEY, transport='rest')
+    # st.secrets에서 키를 꺼내옵니다. (보안 완벽!)
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key, transport='rest')
 except Exception as e:
-    st.error(f"API 키 설정 오류: {e}")
+    st.error("🚨 API 키를 찾을 수 없습니다. Streamlit Settings > Secrets에 키를 저장했는지 확인해주세요!")
+    st.stop()
 
 # --- 📊 사이드바 ---
 with st.sidebar:
@@ -159,10 +159,7 @@ with tab1:
                     result = ask_gemini(f"사용자는 '{tone}'이야. 어울리는 립/블러셔 추천해줘.")
                     st.markdown(result)
                     
-                    # 🔥 [수정됨] 검색어를 심플하게 변경!
-                    # 기존: f"{tone} 틴트 블러셔" -> 변경: f"{tone}"
                     keyword = urllib.parse.quote(f"{tone}")
-                    
                     link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
                     st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
                 else:
@@ -207,7 +204,6 @@ with tab3:
                     st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
                 else:
                     st.error(err)
-
 
 
 
