@@ -13,9 +13,8 @@ st.markdown("""<style>#MainMenu {visibility: hidden;} footer {visibility: hidden
 # ----------------------------------------------------------
 with st.sidebar:
     st.header("🔑 API 키 설정")
-    st.info("반드시 'Create new project'로 만든 새 키를 넣어주세요!")
+    st.info("새 프로젝트로 만든 키를 넣어주세요.")
     
-    # 공백/따옴표 자동 제거 기능 포함
     raw_api_key = st.text_input("Google AI Key 입력", type="password", placeholder="AIza... 붙여넣기")
     api_key = raw_api_key.strip().replace('"', '').replace("'", "")
 
@@ -23,24 +22,44 @@ with st.sidebar:
         st.warning("👈 왼쪽 빈칸에 API 키를 넣어주세요!")
         st.stop()
 
-    # 🔥 [핵심] 일반 통신(REST) 모드로 설정 (서버 차단 회피)
+    # 설정: REST 모드 (서버 차단 회피)
     try:
         genai.configure(api_key=api_key, transport='rest')
     except Exception as e:
         st.error(f"설정 오류: {e}")
 
+# --- 🔥 [핵심] 사용 가능한 모델 자동 찾기 함수 ---
+def get_working_model_name():
+    try:
+        # 서버에게 "사용 가능한 모델 다 내놔!" 하고 물어봅니다.
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                # 1순위: 최신형 Flash 모델이 있으면 그걸 씁니다.
+                if 'flash' in m.name:
+                    return m.name
+                # 2순위: Pro 모델
+                if 'pro' in m.name:
+                    return m.name
+        
+        # 목록은 가져왔는데 딱히 아는 게 없으면 첫 번째 거라도 씁니다.
+        first_model = list(genai.list_models())[0]
+        return first_model.name
+        
+    except Exception:
+        # 목록 가져오기도 실패하면, 가장 기본 이름을 씁니다.
+        return "models/gemini-1.5-flash"
+
 # --- AI 도우미 함수 ---
 def ask_gemini(prompt):
-    # 'latest'를 붙여서 가장 최신 버전 강제 호출
-    model_name = 'models/gemini-1.5-flash-latest'
+    # 위에서 찾은 '진짜 되는 이름'을 가져옵니다.
+    model_name = get_working_model_name()
     
     try:
         model = genai.GenerativeModel(model_name)
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        # 실패 시 상세 에러 메시지 출력
-        return f"죄송합니다. 오류가 발생했습니다.\n\n원인: {e}\n\n💡 해결팁: AI Studio에서 'Create new project'로 키를 다시 발급받아 보세요."
+        return f"오류가 발생했습니다.\n사용 시도한 모델: {model_name}\n에러 내용: {e}"
 
 # --- 분석 로직 (MediaPipe) ---
 mp_face_mesh = mp.solutions.face_mesh
@@ -110,7 +129,6 @@ with tab2:
                     st.markdown(result)
                 else:
                     st.error("전신이 잘 나온 사진을 올려주세요.")
-
 
 
 
