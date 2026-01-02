@@ -10,8 +10,13 @@ import urllib.parse
 GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
 # ----------------------------------------------------------
 
-# 페이지 설정
-st.set_page_config(page_title="AI 스타일리스트 제니", page_icon="✨", layout="centered")
+# 페이지 설정 (initial_sidebar_state="expanded" -> 무조건 열린 채로 시작!)
+st.set_page_config(
+    page_title="AI 스타일리스트 제니", 
+    page_icon="✨", 
+    layout="centered", 
+    initial_sidebar_state="expanded"
+)
 
 # CSS 스타일 (디자인)
 st.markdown("""
@@ -32,7 +37,11 @@ st.markdown("""
         .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
         a[href*="oliveyoung"] { color: #86C041 !important; font-weight: bold; }
         a[href*="musinsa"] { color: #000000 !important; font-weight: bold; }
-        #MainMenu, footer, header {visibility: hidden;}
+        
+        /* 🚨 수정된 부분: 헤더(상단바)를 완전히 숨기지 않고, 메뉴 버튼만 살림 */
+        #MainMenu {visibility: hidden;} 
+        footer {visibility: hidden;}
+        /* header {visibility: hidden;}  <-- 이 줄을 지워서 화살표가 보이게 했습니다! */
     </style>
 """, unsafe_allow_html=True)
 
@@ -42,32 +51,23 @@ try:
 except Exception as e:
     st.error(f"API 키 설정 오류: {e}")
 
-# --- 📊 사이드바: 공유하기 (비밀 카운터 포함) ---
+# --- 📊 사이드바 ---
 with st.sidebar:
     st.header("📢 앱 공유하기")
-    
-    # 내 앱 주소
     my_app_url = "https://ai-stylist-hg7yfg6f4lzxpxu5xvt26k.streamlit.app"
     
-    # 🔥 [핵심 기능] 투명망토 카운터 로직
-    # 1. 카운터 이미지 주소 생성
+    # 비밀 카운터
     badge_url = f"https://hits.seeyoufarm.com/api/count/incr/badge.svg?url={my_app_url}&count_bg=%23FF6B6B&title_bg=%23555555&icon=streamlit.svg&icon_color=%23E7E7E7&title=VISITORS&edge_flat=false"
-    
-    # 2. '몰래 세기' (화면에는 안 보이지만, 코드가 이미지를 로딩해서 숫자는 올라감)
     st.markdown(f'<img src="{badge_url}" style="display:none">', unsafe_allow_html=True)
 
-    # 3. '주인장 확인용' (주소 뒤에 ?view=master가 있을 때만 보임)
-    # Streamlit 최신 버전용 query_params 사용
-    query_params = st.query_params
-    if "view" in query_params and query_params["view"] == "master":
+    # 주인장 확인용 (?view=master)
+    if "view" in st.query_params and st.query_params["view"] == "master":
         st.markdown("### 👁️ (관리자용) 방문자 수")
         st.image(badge_url)
         st.caption("비밀 모드로 보고 계십니다!")
 
     st.markdown("---")
-    
-    # 공유 기능
-    st.caption("👇 링크 복사해서 친구에게 보내기")
+    st.caption("👇 링크 복사")
     st.code(my_app_url, language="text")
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={my_app_url}"
     st.image(qr_url, caption="📷 카메라로 접속!")
@@ -162,50 +162,7 @@ with tab1:
                     st.markdown(result)
                     
                     keyword = urllib.parse.quote(f"{tone} 틴트 블러셔")
-                    link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
-                    st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
-                else:
-                    st.error(err)
-
-with tab2:
-    st.header("👗 체형 분석 & 코디 추천")
-    img_file = st.file_uploader("전신 사진", type=["jpg", "png"], key="body")
-    if img_file:
-        image = Image.open(img_file)
-        st.image(image, width=200)
-        if st.button("코디 추천받기", key="btn_body"):
-            with st.spinner('분석 중...'):
-                ratio, body_type = analyze_body_shape(image)
-                if ratio:
-                    st.success(f"체형 타입: **{body_type}**")
-                    result = ask_gemini(f"체형 '{body_type}'에 어울리는 요즘 유행 코디 추천해줘.")
-                    st.markdown(result)
-                    
-                    keyword = urllib.parse.quote(f"{body_type} 코디")
-                    link = f"https://www.musinsa.com/search/musinsa/integration?type=&q={keyword}"
-                    st.link_button(f"🖤 무신사에서 '{body_type}' 옷 구경하기", link)
-                else:
-                    st.error("전신 사진 필요")
-
-with tab3:
-    st.header("💇‍♀️ 얼굴형 맞춤 헤어")
-    img_file = st.file_uploader("정면 얼굴", type=["jpg", "png"], key="hair")
-    if img_file:
-        image = Image.open(img_file)
-        st.image(image, width=200)
-        if st.button("헤어 추천받기", key="btn_hair"):
-            with st.spinner('분석 중...'):
-                shape, err = analyze_face_shape(image)
-                if shape:
-                    st.success(f"얼굴형: **{shape}**")
-                    result = ask_gemini(f"얼굴형 '{shape}'에 어울리는 헤어스타일 추천해줘.")
-                    st.markdown(result)
-                    
-                    keyword = urllib.parse.quote(f"{shape} 헤어스타일 추천")
-                    link = f"https://www.youtube.com/results?search_query={keyword}"
-                    st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
-                else:
-                    st.error(err)
+                    link = f"
 
 
 
