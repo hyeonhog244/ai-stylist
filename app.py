@@ -3,10 +3,10 @@ from PIL import Image
 import numpy as np
 import google.generativeai as genai
 import mediapipe as mp
+import urllib.parse # QR코드 생성을 위한 도구
 
 # ----------------------------------------------------------
-# 👇 여기에 아까 성공했던 '진짜 API 키'를 따옴표 안에 넣으세요!
-# (친구들은 이 키를 안 넣어도 앱을 쓸 수 있게 됩니다.)
+# 👇 여기에 아까 성공했던 '진짜 API 키'를 붙여넣으세요!
 GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
 # ----------------------------------------------------------
 
@@ -14,14 +14,33 @@ GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
 st.set_page_config(page_title="Personal AI Stylist Pro", page_icon="✨", layout="centered")
 st.markdown("""<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
-# API 설정 (이제 화면에서 안 받고, 위에서 적은 키를 바로 씁니다)
+# API 설정
 try:
-    # transport='rest' 옵션은 유지 (서버 차단 방지)
     genai.configure(api_key=GOOGLE_API_KEY, transport='rest')
 except Exception as e:
     st.error(f"API 키 설정 오류: {e}")
 
-# --- 🔥 [핵심] 사용 가능한 모델 자동 찾기 (유지) ---
+# --- 📢 사이드바: 친구에게 공유하기 (NEW!) ---
+with st.sidebar:
+    st.header("📢 친구에게 자랑하기")
+    st.write("이 앱을 친구들에게 알려주세요!")
+    
+    # 1. 내 앱 주소 (주인님 앱 주소로 자동 설정됨)
+    # ※ 배포된 후 주소창에 있는 주소를 복사해서 아래 "" 안에 넣으면 더 정확합니다!
+    my_app_url = "https://ai-stylist-hg7yfg6f4lzxpxu5xvt26k.streamlit.app"
+    
+    # 2. 링크 복사 기능 (코드 블록을 쓰면 복사 버튼이 자동 생김)
+    st.caption("👇 아래 주소를 복사해서 카톡에 붙여넣으세요!")
+    st.code(my_app_url, language="text")
+    
+    # 3. QR 코드 생성 (구글 차트 API 활용 - 설치 필요 없음)
+    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={my_app_url}"
+    st.image(qr_url, caption="📱 카메라로 찍으면 바로 접속!")
+    
+    st.markdown("---")
+    st.info("💡 팁: 친구가 사진을 올리면 AI 제니가 분석해줍니다.")
+
+# --- 모델 자동 감지 ---
 def get_working_model_name():
     try:
         for m in genai.list_models():
@@ -40,7 +59,7 @@ def ask_gemini(prompt):
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"AI 응답 오류 ({model_name}): {e}"
+        return f"AI 응답 오류: {e}"
 
 # --- 분석 로직 (MediaPipe) ---
 mp_face_mesh = mp.solutions.face_mesh
