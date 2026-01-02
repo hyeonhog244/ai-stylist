@@ -4,62 +4,43 @@ import numpy as np
 import google.generativeai as genai
 import mediapipe as mp
 
+# ----------------------------------------------------------
+# 👇 여기에 아까 성공했던 '진짜 API 키'를 따옴표 안에 넣으세요!
+# (친구들은 이 키를 안 넣어도 앱을 쓸 수 있게 됩니다.)
+GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
+# ----------------------------------------------------------
+
 # 페이지 설정
 st.set_page_config(page_title="Personal AI Stylist Pro", page_icon="✨", layout="centered")
 st.markdown("""<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
-# ----------------------------------------------------------
-# 🔑 사이드바: 키 입력
-# ----------------------------------------------------------
-with st.sidebar:
-    st.header("🔑 API 키 설정")
-    st.info("새 프로젝트로 만든 키를 넣어주세요.")
-    
-    raw_api_key = st.text_input("Google AI Key 입력", type="password", placeholder="AIza... 붙여넣기")
-    api_key = raw_api_key.strip().replace('"', '').replace("'", "")
+# API 설정 (이제 화면에서 안 받고, 위에서 적은 키를 바로 씁니다)
+try:
+    # transport='rest' 옵션은 유지 (서버 차단 방지)
+    genai.configure(api_key=GOOGLE_API_KEY, transport='rest')
+except Exception as e:
+    st.error(f"API 키 설정 오류: {e}")
 
-    if not api_key:
-        st.warning("👈 왼쪽 빈칸에 API 키를 넣어주세요!")
-        st.stop()
-
-    # 설정: REST 모드 (서버 차단 회피)
-    try:
-        genai.configure(api_key=api_key, transport='rest')
-    except Exception as e:
-        st.error(f"설정 오류: {e}")
-
-# --- 🔥 [핵심] 사용 가능한 모델 자동 찾기 함수 ---
+# --- 🔥 [핵심] 사용 가능한 모델 자동 찾기 (유지) ---
 def get_working_model_name():
     try:
-        # 서버에게 "사용 가능한 모델 다 내놔!" 하고 물어봅니다.
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
-                # 1순위: 최신형 Flash 모델이 있으면 그걸 씁니다.
-                if 'flash' in m.name:
-                    return m.name
-                # 2순위: Pro 모델
-                if 'pro' in m.name:
-                    return m.name
-        
-        # 목록은 가져왔는데 딱히 아는 게 없으면 첫 번째 거라도 씁니다.
-        first_model = list(genai.list_models())[0]
-        return first_model.name
-        
-    except Exception:
-        # 목록 가져오기도 실패하면, 가장 기본 이름을 씁니다.
+                if 'flash' in m.name: return m.name
+                if 'pro' in m.name: return m.name
+        return list(genai.list_models())[0].name
+    except:
         return "models/gemini-1.5-flash"
 
 # --- AI 도우미 함수 ---
 def ask_gemini(prompt):
-    # 위에서 찾은 '진짜 되는 이름'을 가져옵니다.
     model_name = get_working_model_name()
-    
     try:
         model = genai.GenerativeModel(model_name)
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"오류가 발생했습니다.\n사용 시도한 모델: {model_name}\n에러 내용: {e}"
+        return f"AI 응답 오류 ({model_name}): {e}"
 
 # --- 분석 로직 (MediaPipe) ---
 mp_face_mesh = mp.solutions.face_mesh
@@ -94,7 +75,7 @@ def analyze_body_shape(image):
 
 # --- 메인 화면 ---
 st.title("✨ AI Stylist : 제니")
-st.write("AI가 당신을 분석하고 맞춤형 스타일링을 제안합니다.")
+st.write("당신의 사진을 분석해 맞춤형 스타일을 제안해드립니다.")
 
 tab1, tab2 = st.tabs(["🎨 퍼스널 컬러", "👗 체형 코디"])
 
@@ -129,6 +110,7 @@ with tab2:
                     st.markdown(result)
                 else:
                     st.error("전신이 잘 나온 사진을 올려주세요.")
+
 
 
 
