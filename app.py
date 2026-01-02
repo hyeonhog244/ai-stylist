@@ -13,25 +13,56 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS 스타일
+# CSS 스타일 (진단 카드 디자인 추가)
 st.markdown("""
     <style>
         @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css");
         html, body, [class*="css"] { font-family: 'Pretendard', sans-serif; }
         .stApp { background-color: #F8F9FA; }
+        
+        /* 메인 컨테이너 */
         .block-container {
             background-color: #FFFFFF; padding: 2rem; border-radius: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 800px;
         }
+        
+        /* 진단 결과 카드 스타일 (NEW!) */
+        .result-card {
+            background-color: #FFF5F5; /* 연한 핑크 배경 */
+            border: 2px solid #FFD6D6;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .result-title {
+            color: #FF6B6B;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            border-bottom: 2px dashed #FFD6D6;
+            padding-bottom: 10px;
+        }
+        .result-content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #495057;
+        }
+        
         h1 { color: #FF6B6B; text-align: center; font-weight: 800; }
+        
+        /* 버튼 스타일 */
         .stButton > button {
             width: 100%; border-radius: 30px; border: none; padding: 15px 20px;
             font-weight: bold; font-size: 16px; transition: all 0.3s ease;
             background: linear-gradient(90deg, #FF8E53 0%, #FF6B6B 100%); color: white;
         }
         .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
+        
         a[href*="oliveyoung"] { color: #86C041 !important; font-weight: bold; }
         a[href*="musinsa"] { color: #000000 !important; font-weight: bold; }
+        
         #MainMenu {visibility: hidden;} 
         footer {visibility: hidden;}
     </style>
@@ -50,7 +81,6 @@ with st.sidebar:
     st.header("📢 앱 공유하기")
     my_app_url = "https://ai-stylist-hg7yfg6f4lzxpxu5xvt26k.streamlit.app"
     
-    # 비밀 카운터
     badge_url = f"https://hits.seeyoufarm.com/api/count/incr/badge.svg?url={my_app_url}&count_bg=%23FF6B6B&title_bg=%23555555&icon=streamlit.svg&icon_color=%23E7E7E7&title=VISITORS&edge_flat=false"
     st.markdown(f'<img src="{badge_url}" style="display:none">', unsafe_allow_html=True)
 
@@ -150,9 +180,19 @@ with tab1:
             with st.spinner('분석 중...'):
                 tone, err = analyze_personal_color(image)
                 if tone:
-                    st.success(f"당신의 톤: **{tone}**")
-                    result = ask_gemini(f"사용자는 '{tone}'이야. 어울리는 립/블러셔 추천해줘.")
-                    st.markdown(result)
+                    # 결과 카드 디자인 적용 (HTML/CSS)
+                    st.markdown(f"""
+                        <div class="result-card">
+                            <div class="result-title">🎨 진단 결과: {tone}</div>
+                            <div class="result-content">
+                                AI 제니가 분석한 당신의 퍼스널 컬러입니다.<br>
+                                아래 추천 팁을 확인해보세요! 👇
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    result = ask_gemini(f"사용자는 '{tone}'이야. 10년차 뷰티 에디터로서 어울리는 립/블러셔 컬러와 메이크업 꿀팁을 핵심만 요약해서 알려줘.")
+                    st.info(result)
                     
                     keyword = urllib.parse.quote(f"{tone}")
                     link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
@@ -170,11 +210,20 @@ with tab2:
             with st.spinner('분석 중...'):
                 ratio, body_type = analyze_body_shape(image)
                 if ratio:
-                    st.success(f"체형 타입: **{body_type}**")
-                    result = ask_gemini(f"체형 '{body_type}'에 어울리는 요즘 유행 코디 추천해줘.")
-                    st.markdown(result)
+                    # 결과 카드 디자인 적용
+                    st.markdown(f"""
+                        <div class="result-card">
+                            <div class="result-title">👗 체형 타입: {body_type}</div>
+                            <div class="result-content">
+                                신체 비율을 분석한 결과입니다.<br>
+                                장점은 살리고 단점은 보완하는 코디법을 알려드릴게요! 👇
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
                     
-                    # 🔥 [수정] 무신사 최신 랭킹 주소 적용
+                    result = ask_gemini(f"체형 '{body_type}'에 어울리는 베스트 코디와 피해야 할 옷을 패션 MD처럼 콕 집어서 알려줘.")
+                    st.info(result)
+                    
                     link = "https://www.musinsa.com/main/musinsa/ranking"
                     st.link_button(f"🔥 무신사 랭킹 보고 옷 고르기", link)
                 else:
@@ -190,18 +239,25 @@ with tab3:
             with st.spinner('분석 중...'):
                 shape, err = analyze_face_shape(image)
                 if shape:
-                    st.success(f"얼굴형: **{shape}**")
-                    result = ask_gemini(f"얼굴형 '{shape}'에 어울리는 헤어스타일 추천해줘.")
-                    st.markdown(result)
+                    # 결과 카드 디자인 적용
+                    st.markdown(f"""
+                        <div class="result-card">
+                            <div class="result-title">💇‍♀️ 얼굴형 진단: {shape}</div>
+                            <div class="result-content">
+                                얼굴의 가로/세로 비율을 분석했습니다.<br>
+                                인생 머리를 찾아드릴게요! 👇
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                    result = ask_gemini(f"얼굴형 '{shape}'에 찰떡인 앞머리/기장/펌 스타일을 헤어 디자이너처럼 추천해줘.")
+                    st.info(result)
                     
                     keyword = urllib.parse.quote(f"{shape} 헤어스타일 추천")
                     link = f"https://www.youtube.com/results?search_query={keyword}"
                     st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
                 else:
                     st.error(err)
-
-
-
 
 
 
