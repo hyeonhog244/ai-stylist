@@ -3,10 +3,10 @@ from PIL import Image
 import numpy as np
 import google.generativeai as genai
 import mediapipe as mp
-import urllib.parse # URL 인코딩용 (한글 검색어 처리)
+import urllib.parse
 
 # ----------------------------------------------------------
-# 👇 '진짜 API 키'를 넣어주세요
+# 👇 '진짜 API 키'를 넣어주세요 (따옴표 필수!)
 GOOGLE_API_KEY = "AIzaSyAgWZ2KiMIAuIMMpWK--SB476Csa_e8Yrg"
 # ----------------------------------------------------------
 
@@ -24,19 +24,14 @@ st.markdown("""
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 800px;
         }
         h1 { color: #FF6B6B; text-align: center; font-weight: 800; }
-        
-        /* 버튼 스타일 */
         .stButton > button {
             width: 100%; border-radius: 30px; border: none; padding: 15px 20px;
             font-weight: bold; font-size: 16px; transition: all 0.3s ease;
             background: linear-gradient(90deg, #FF8E53 0%, #FF6B6B 100%); color: white;
         }
         .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
-        
-        /* 쇼핑몰 버튼 전용 스타일 (초록색, 검은색 등) */
         a[href*="oliveyoung"] { color: #86C041 !important; font-weight: bold; }
         a[href*="musinsa"] { color: #000000 !important; font-weight: bold; }
-        
         #MainMenu, footer, header {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
@@ -47,11 +42,32 @@ try:
 except Exception as e:
     st.error(f"API 키 설정 오류: {e}")
 
-# 사이드바
+# --- 📊 사이드바: 공유하기 (비밀 카운터 포함) ---
 with st.sidebar:
-    st.header("📢 공유하기")
-    my_app_url = "https://ai-stylist-hg7yfg6f4lzxpxu5xvt26k.streamlit.app" # 배포 후 실제 주소로 변경 추천
-    st.caption("👇 링크 복사")
+    st.header("📢 앱 공유하기")
+    
+    # 내 앱 주소
+    my_app_url = "https://ai-stylist-hg7yfg6f4lzxpxu5xvt26k.streamlit.app"
+    
+    # 🔥 [핵심 기능] 투명망토 카운터 로직
+    # 1. 카운터 이미지 주소 생성
+    badge_url = f"https://hits.seeyoufarm.com/api/count/incr/badge.svg?url={my_app_url}&count_bg=%23FF6B6B&title_bg=%23555555&icon=streamlit.svg&icon_color=%23E7E7E7&title=VISITORS&edge_flat=false"
+    
+    # 2. '몰래 세기' (화면에는 안 보이지만, 코드가 이미지를 로딩해서 숫자는 올라감)
+    st.markdown(f'<img src="{badge_url}" style="display:none">', unsafe_allow_html=True)
+
+    # 3. '주인장 확인용' (주소 뒤에 ?view=master가 있을 때만 보임)
+    # Streamlit 최신 버전용 query_params 사용
+    query_params = st.query_params
+    if "view" in query_params and query_params["view"] == "master":
+        st.markdown("### 👁️ (관리자용) 방문자 수")
+        st.image(badge_url)
+        st.caption("비밀 모드로 보고 계십니다!")
+
+    st.markdown("---")
+    
+    # 공유 기능
+    st.caption("👇 링크 복사해서 친구에게 보내기")
     st.code(my_app_url, language="text")
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={my_app_url}"
     st.image(qr_url, caption="📷 카메라로 접속!")
@@ -90,7 +106,7 @@ def analyze_personal_color(image):
         cx, cy = int(lm[116].x * w), int(lm[116].y * h)
         if cx >= w or cy >= h: return None, "화면 밖 얼굴"
         pixel = img_np[cy, cx]
-        tone = "웜톤" if pixel[0] > pixel[2] else "쿨톤" # 간단하게 한글로 통일
+        tone = "웜톤" if pixel[0] > pixel[2] else "쿨톤"
         return tone, None
 
 def analyze_body_shape(image):
@@ -131,7 +147,6 @@ st.write("AI가 분석하고, 어울리는 아이템까지 추천해드립니다
 
 tab1, tab2, tab3 = st.tabs(["🎨 뷰티/메이크업", "👗 패션/코디", "💇‍♀️ 헤어스타일"])
 
-# 1. 뷰티 (올리브영 연동)
 with tab1:
     st.header("🎨 퍼스널 컬러 & 화장품 추천")
     img_file = st.file_uploader("얼굴 사진", type=["jpg", "png"], key="face")
@@ -146,14 +161,12 @@ with tab1:
                     result = ask_gemini(f"사용자는 '{tone}'이야. 어울리는 립/블러셔 추천해줘.")
                     st.markdown(result)
                     
-                    # 🔥 [수익화] 올리브영 검색 버튼 자동 생성
-                    keyword = urllib.parse.quote(f"{tone} 틴트 블러셔") # URL 인코딩
+                    keyword = urllib.parse.quote(f"{tone} 틴트 블러셔")
                     link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
                     st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
                 else:
                     st.error(err)
 
-# 2. 패션 (무신사 연동)
 with tab2:
     st.header("👗 체형 분석 & 코디 추천")
     img_file = st.file_uploader("전신 사진", type=["jpg", "png"], key="body")
@@ -168,14 +181,12 @@ with tab2:
                     result = ask_gemini(f"체형 '{body_type}'에 어울리는 요즘 유행 코디 추천해줘.")
                     st.markdown(result)
                     
-                    # 🔥 [수익화] 무신사 검색 버튼 자동 생성
                     keyword = urllib.parse.quote(f"{body_type} 코디")
                     link = f"https://www.musinsa.com/search/musinsa/integration?type=&q={keyword}"
                     st.link_button(f"🖤 무신사에서 '{body_type}' 옷 구경하기", link)
                 else:
                     st.error("전신 사진 필요")
 
-# 3. 헤어 (유튜브/네이버 연동)
 with tab3:
     st.header("💇‍♀️ 얼굴형 맞춤 헤어")
     img_file = st.file_uploader("정면 얼굴", type=["jpg", "png"], key="hair")
@@ -190,13 +201,11 @@ with tab3:
                     result = ask_gemini(f"얼굴형 '{shape}'에 어울리는 헤어스타일 추천해줘.")
                     st.markdown(result)
                     
-                    # 🔥 [정보] 유튜브 검색 연결
                     keyword = urllib.parse.quote(f"{shape} 헤어스타일 추천")
                     link = f"https://www.youtube.com/results?search_query={keyword}"
                     st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
                 else:
                     st.error(err)
-
 
 
 
