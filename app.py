@@ -9,24 +9,21 @@ st.set_page_config(page_title="Personal AI Stylist Pro", page_icon="✨", layout
 st.markdown("""<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
 # ----------------------------------------------------------
-# 🔑 사이드바: 키 입력 + 통신 설정 (핵심!)
+# 🔑 사이드바: 키 입력
 # ----------------------------------------------------------
 with st.sidebar:
     st.header("🔑 API 키 설정")
-    st.info("AIzaSyAOyVgnmN-3qnGt53ftiS8NmCfkfKvx7LI")
+    st.info("반드시 'Create new project'로 만든 새 키를 넣어주세요!")
     
-    # 1. 입력받기 (따옴표나 공백이 있어도 알아서 처리함)
-    raw_api_key = st.text_input("Google AI Key 입력", type="password", placeholder="AIza... 키 붙여넣기")
-    
-    # 2. 전처리: 공백 및 따옴표 제거 (실수 방지)
+    # 공백/따옴표 자동 제거 기능 포함
+    raw_api_key = st.text_input("Google AI Key 입력", type="password", placeholder="AIza... 붙여넣기")
     api_key = raw_api_key.strip().replace('"', '').replace("'", "")
 
     if not api_key:
         st.warning("👈 왼쪽 빈칸에 API 키를 넣어주세요!")
         st.stop()
 
-    # 3. 🔥 [핵심 해결책] 'transport="rest"' 추가!
-    # (서버 막힘 없이 일반 인터넷망으로 우회해서 연결하는 설정)
+    # 🔥 [핵심] 일반 통신(REST) 모드로 설정 (서버 차단 회피)
     try:
         genai.configure(api_key=api_key, transport='rest')
     except Exception as e:
@@ -34,13 +31,16 @@ with st.sidebar:
 
 # --- AI 도우미 함수 ---
 def ask_gemini(prompt):
-    # 진단기에서 성공했던 그 이름 그대로 사용
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    # 'latest'를 붙여서 가장 최신 버전 강제 호출
+    model_name = 'models/gemini-1.5-flash-latest'
+    
     try:
+        model = genai.GenerativeModel(model_name)
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"죄송합니다. 오류가 발생했습니다.\n(에러 내용: {e})\n\n💡 팁: 키가 정확한지 확인해주세요."
+        # 실패 시 상세 에러 메시지 출력
+        return f"죄송합니다. 오류가 발생했습니다.\n\n원인: {e}\n\n💡 해결팁: AI Studio에서 'Create new project'로 키를 다시 발급받아 보세요."
 
 # --- 분석 로직 (MediaPipe) ---
 mp_face_mesh = mp.solutions.face_mesh
@@ -110,7 +110,6 @@ with tab2:
                     st.markdown(result)
                 else:
                     st.error("전신이 잘 나온 사진을 올려주세요.")
-
 
 
 
