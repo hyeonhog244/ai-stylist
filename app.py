@@ -5,9 +5,7 @@ import google.generativeai as genai
 import mediapipe as mp
 
 # ----------------------------------------------------------
-# 👇 방금 진단기에서 성공했던 그 API 키를 여기에 넣으세요!
-GOOGLE_API_KEY = "AIzaSyAOyVgnmN-3qnGt53ftiS8NmCfkfKvx7LI" 
-# ----------------------------------------------------------
+GOOGLE_API_KEY = "AIzaSyAOyVgnmN-3qnGt53ftiS8NmCfkfKvx7LI"
 
 # API 설정
 try:
@@ -145,6 +143,7 @@ with tab2:
                         st.error(f"AI 연결 오류: {e}")
                 else:
                     st.error("전신이 잘 나온 사진을 올려주세요.")
+
 
 
 
