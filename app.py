@@ -39,14 +39,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------
-# 🔥 [핵심 수정] 이제 코드가 아니라 '비밀 금고(Secrets)'에서 키를 가져옵니다!
+# 🔒 비밀 금고(Secrets)에서 키 가져오기 (보안 유지)
 # ----------------------------------------------------------
 try:
-    # st.secrets에서 키를 꺼내옵니다. (보안 완벽!)
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key, transport='rest')
 except Exception as e:
-    st.error("🚨 API 키를 찾을 수 없습니다. Streamlit Settings > Secrets에 키를 저장했는지 확인해주세요!")
+    st.error("🚨 API 키를 찾을 수 없습니다. Streamlit Settings > Secrets 설정을 확인해주세요!")
     st.stop()
 
 # --- 📊 사이드바 ---
@@ -159,52 +158,9 @@ with tab1:
                     result = ask_gemini(f"사용자는 '{tone}'이야. 어울리는 립/블러셔 추천해줘.")
                     st.markdown(result)
                     
+                    # 올리브영 검색: '웜톤', '쿨톤' 키워드만 사용
                     keyword = urllib.parse.quote(f"{tone}")
-                    link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
-                    st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
-                else:
-                    st.error(err)
-
-with tab2:
-    st.header("👗 체형 분석 & 코디 추천")
-    img_file = st.file_uploader("전신 사진", type=["jpg", "png"], key="body")
-    if img_file:
-        image = Image.open(img_file)
-        st.image(image, width=200)
-        if st.button("코디 추천받기", key="btn_body"):
-            with st.spinner('분석 중...'):
-                ratio, body_type = analyze_body_shape(image)
-                if ratio:
-                    st.success(f"체형 타입: **{body_type}**")
-                    result = ask_gemini(f"체형 '{body_type}'에 어울리는 요즘 유행 코디 추천해줘.")
-                    st.markdown(result)
-                    
-                    keyword = urllib.parse.quote(f"{body_type} 코디")
-                    link = f"https://www.musinsa.com/search/musinsa/integration?type=&q={keyword}"
-                    st.link_button(f"🖤 무신사에서 '{body_type}' 옷 구경하기", link)
-                else:
-                    st.error("전신 사진 필요")
-
-with tab3:
-    st.header("💇‍♀️ 얼굴형 맞춤 헤어")
-    img_file = st.file_uploader("정면 얼굴", type=["jpg", "png"], key="hair")
-    if img_file:
-        image = Image.open(img_file)
-        st.image(image, width=200)
-        if st.button("헤어 추천받기", key="btn_hair"):
-            with st.spinner('분석 중...'):
-                shape, err = analyze_face_shape(image)
-                if shape:
-                    st.success(f"얼굴형: **{shape}**")
-                    result = ask_gemini(f"얼굴형 '{shape}'에 어울리는 헤어스타일 추천해줘.")
-                    st.markdown(result)
-                    
-                    keyword = urllib.parse.quote(f"{shape} 헤어스타일 추천")
-                    link = f"https://www.youtube.com/results?search_query={keyword}"
-                    st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
-                else:
-                    st.error(err)
-
+                    link = f
 
 
 
