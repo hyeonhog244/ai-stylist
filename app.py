@@ -4,6 +4,11 @@ import numpy as np
 import google.generativeai as genai
 import mediapipe as mp
 import urllib.parse
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime
+import pytz
+import json  # 👈 json 번역기 추가!
 
 # 페이지 설정
 st.set_page_config(
@@ -13,89 +18,76 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS 스타일 (진단 카드 디자인 추가)
+# CSS 스타일
 st.markdown("""
     <style>
         @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css");
         html, body, [class*="css"] { font-family: 'Pretendard', sans-serif; }
         .stApp { background-color: #F8F9FA; }
-        
-        /* 메인 컨테이너 */
         .block-container {
             background-color: #FFFFFF; padding: 2rem; border-radius: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 800px;
         }
-        
-        /* 진단 결과 카드 스타일 (NEW!) */
         .result-card {
-            background-color: #FFF5F5; /* 연한 핑크 배경 */
-            border: 2px solid #FFD6D6;
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            text-align: left;
+            background-color: #FFF5F5; border: 2px solid #FFD6D6; border-radius: 15px; padding: 20px; margin: 20px 0;
         }
-        .result-title {
-            color: #FF6B6B;
-            font-size: 24px;
-            font-weight: 800;
-            margin-bottom: 10px;
-            border-bottom: 2px dashed #FFD6D6;
-            padding-bottom: 10px;
-        }
-        .result-content {
-            font-size: 16px;
-            line-height: 1.6;
-            color: #495057;
-        }
-        
+        .result-title { color: #FF6B6B; font-size: 24px; font-weight: 800; margin-bottom: 10px; border-bottom: 2px dashed #FFD6D6; padding-bottom: 10px; }
+        .result-content { font-size: 16px; color: #495057; line-height: 1.6; }
         h1 { color: #FF6B6B; text-align: center; font-weight: 800; }
-        
-        /* 버튼 스타일 */
         .stButton > button {
             width: 100%; border-radius: 30px; border: none; padding: 15px 20px;
             font-weight: bold; font-size: 16px; transition: all 0.3s ease;
             background: linear-gradient(90deg, #FF8E53 0%, #FF6B6B 100%); color: white;
         }
         .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
-        
         a[href*="oliveyoung"] { color: #86C041 !important; font-weight: bold; }
         a[href*="musinsa"] { color: #000000 !important; font-weight: bold; }
-        
-        #MainMenu {visibility: hidden;} 
-        footer {visibility: hidden;}
+        #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
-# 🔒 비밀 금고에서 API 키 가져오기
+# 🔒 비밀 금고 연결 (수정된 버전)
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key, transport='rest')
+    
+    def save_to_sheet(category, result_value):
+        try:
+            # 👇 여기가 바뀐 핵심! (텍스트 덩어리를 가져와서 JSON으로 변환)
+            json_text = st.secrets["gcp_json"]
+            credentials_dict = json.loads(json_text)
+            
+            scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+            creds = Credentials.from_service_account_info(credentials_dict, scopes=scope)
+            client = gspread.authorize(creds)
+            sheet = client.open("ai_stylist_data").sheet1
+            kst = pytz.timezone('Asia/Seoul')
+            now = datetime.now(kst).strftime("%Y-%m-%d %H:%M:%S")
+            sheet.append_row([now, category, result_value])
+        except Exception as e:
+            print(f"데이터 저장 실패: {e}")
+
 except Exception as e:
-    st.error("🚨 API 키 오류: Streamlit Settings > Secrets에 키가 저장되어 있는지 확인해주세요.")
+    st.error(f"설정 오류: {e}")
     st.stop()
 
-# --- 📊 사이드바 ---
+# --- 사이드바 ---
 with st.sidebar:
     st.header("📢 앱 공유하기")
     my_app_url = "https://ai-stylist-hg7yfg6f4lzxpxu5xvt26k.streamlit.app"
-    
     badge_url = f"https://hits.seeyoufarm.com/api/count/incr/badge.svg?url={my_app_url}&count_bg=%23FF6B6B&title_bg=%23555555&icon=streamlit.svg&icon_color=%23E7E7E7&title=VISITORS&edge_flat=false"
     st.markdown(f'<img src="{badge_url}" style="display:none">', unsafe_allow_html=True)
-
     if "view" in st.query_params and st.query_params["view"] == "master":
         st.markdown("### 👁️ (관리자용) 방문자 수")
         st.image(badge_url)
         st.caption("비밀 모드로 보고 계십니다!")
-
     st.markdown("---")
     st.caption("👇 링크 복사")
     st.code(my_app_url, language="text")
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={my_app_url}"
     st.image(qr_url, caption="📷 카메라로 접속!")
 
-# 모델 자동 선택
+# 모델 자동 선택 함수
 def get_working_model_name():
     try:
         for m in genai.list_models():
@@ -115,7 +107,7 @@ def ask_gemini(prompt):
     except Exception as e:
         return f"AI 응답 오류: {e}"
 
-# 분석 로직들
+# 분석 로직
 mp_face_mesh = mp.solutions.face_mesh
 mp_pose = mp.solutions.pose
 
@@ -180,25 +172,14 @@ with tab1:
             with st.spinner('분석 중...'):
                 tone, err = analyze_personal_color(image)
                 if tone:
-                    # 결과 카드 디자인 적용 (HTML/CSS)
-                    st.markdown(f"""
-                        <div class="result-card">
-                            <div class="result-title">🎨 진단 결과: {tone}</div>
-                            <div class="result-content">
-                                AI 제니가 분석한 당신의 퍼스널 컬러입니다.<br>
-                                아래 추천 팁을 확인해보세요! 👇
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    result = ask_gemini(f"사용자는 '{tone}'이야. 10년차 뷰티 에디터로서 어울리는 립/블러셔 컬러와 메이크업 꿀팁을 핵심만 요약해서 알려줘.")
+                    save_to_sheet("퍼스널컬러", tone) # 저장!
+                    st.markdown(f"""<div class="result-card"><div class="result-title">🎨 진단 결과: {tone}</div><div class="result-content">AI 제니가 분석한 당신의 퍼스널 컬러입니다.<br>아래 추천 팁을 확인해보세요! 👇</div></div>""", unsafe_allow_html=True)
+                    result = ask_gemini(f"사용자는 '{tone}'이야. 10년차 뷰티 에디터로서 어울리는 립/블러셔 컬러와 메이크업 꿀팁 요약.")
                     st.info(result)
-                    
                     keyword = urllib.parse.quote(f"{tone}")
                     link = f"https://www.oliveyoung.co.kr/store/search/getSearchMain.do?query={keyword}"
                     st.link_button(f"🫒 올리브영에서 '{tone}' 꿀템 찾기", link)
-                else:
-                    st.error(err)
+                else: st.error(err)
 
 with tab2:
     st.header("👗 체형 분석 & 코디 추천")
@@ -210,24 +191,13 @@ with tab2:
             with st.spinner('분석 중...'):
                 ratio, body_type = analyze_body_shape(image)
                 if ratio:
-                    # 결과 카드 디자인 적용
-                    st.markdown(f"""
-                        <div class="result-card">
-                            <div class="result-title">👗 체형 타입: {body_type}</div>
-                            <div class="result-content">
-                                신체 비율을 분석한 결과입니다.<br>
-                                장점은 살리고 단점은 보완하는 코디법을 알려드릴게요! 👇
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    result = ask_gemini(f"체형 '{body_type}'에 어울리는 베스트 코디와 피해야 할 옷을 패션 MD처럼 콕 집어서 알려줘.")
+                    save_to_sheet("체형분석", body_type) # 저장!
+                    st.markdown(f"""<div class="result-card"><div class="result-title">👗 체형 타입: {body_type}</div><div class="result-content">신체 비율을 분석한 결과입니다.<br>장점은 살리고 단점은 보완하는 코디법을 알려드릴게요! 👇</div></div>""", unsafe_allow_html=True)
+                    result = ask_gemini(f"체형 '{body_type}'에 어울리는 베스트 코디와 피해야 할 옷 추천.")
                     st.info(result)
-                    
                     link = "https://www.musinsa.com/main/musinsa/ranking"
                     st.link_button(f"🔥 무신사 랭킹 보고 옷 고르기", link)
-                else:
-                    st.error("전신 사진 필요")
+                else: st.error("전신 사진 필요")
 
 with tab3:
     st.header("💇‍♀️ 얼굴형 맞춤 헤어")
@@ -239,25 +209,18 @@ with tab3:
             with st.spinner('분석 중...'):
                 shape, err = analyze_face_shape(image)
                 if shape:
-                    # 결과 카드 디자인 적용
-                    st.markdown(f"""
-                        <div class="result-card">
-                            <div class="result-title">💇‍♀️ 얼굴형 진단: {shape}</div>
-                            <div class="result-content">
-                                얼굴의 가로/세로 비율을 분석했습니다.<br>
-                                인생 머리를 찾아드릴게요! 👇
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    result = ask_gemini(f"얼굴형 '{shape}'에 찰떡인 앞머리/기장/펌 스타일을 헤어 디자이너처럼 추천해줘.")
+                    save_to_sheet("얼굴형", shape) # 저장!
+                    st.markdown(f"""<div class="result-card"><div class="result-title">💇‍♀️ 얼굴형 진단: {shape}</div><div class="result-content">얼굴의 가로/세로 비율을 분석했습니다.<br>인생 머리를 찾아드릴게요! 👇</div></div>""", unsafe_allow_html=True)
+                    result = ask_gemini(f"얼굴형 '{shape}'에 찰떡인 앞머리/기장/펌 스타일 추천.")
                     st.info(result)
-                    
                     keyword = urllib.parse.quote(f"{shape} 헤어스타일 추천")
                     link = f"https://www.youtube.com/results?search_query={keyword}"
                     st.link_button(f"▶️ 유튜브에서 '{shape}' 스타일 영상 보기", link)
-                else:
-                    st.error(err)
+                else: st.error(err)
+
+st.markdown("---")
+st.caption("🔒 본 서비스는 사용자의 사진을 서버에 저장하지 않으며, 분석 후 즉시 폐기됩니다. 안심하고 이용하세요!")
+
 
 
 
