@@ -8,7 +8,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import pytz
-import json  # 👈 json 번역기 추가!
+import json
 
 # 페이지 설정
 st.set_page_config(
@@ -46,26 +46,32 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 🔒 비밀 금고 연결 (수정된 버전)
+# 🔒 비밀 금고 연결
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key, transport='rest')
     
     def save_to_sheet(category, result_value):
         try:
-            # 👇 여기가 바뀐 핵심! (텍스트 덩어리를 가져와서 JSON으로 변환)
+            # secrets에서 JSON 텍스트 가져오기
             json_text = st.secrets["gcp_json"]
             credentials_dict = json.loads(json_text)
             
             scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
             creds = Credentials.from_service_account_info(credentials_dict, scopes=scope)
             client = gspread.authorize(creds)
+            
+            # 시트 열기
             sheet = client.open("ai_stylist_data").sheet1
+            
+            # 시간 및 데이터 저장
             kst = pytz.timezone('Asia/Seoul')
             now = datetime.now(kst).strftime("%Y-%m-%d %H:%M:%S")
             sheet.append_row([now, category, result_value])
+            
         except Exception as e:
-            print(f"데이터 저장 실패: {e}")
+            # 🚨 에러가 나면 화면에 빨간 박스로 띄워줌! (여기서 원인을 알 수 있음)
+            st.error(f"⚠️ 데이터 저장 실패: {e}")
 
 except Exception as e:
     st.error(f"설정 오류: {e}")
